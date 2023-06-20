@@ -13,13 +13,16 @@ const DailyTasks = () => {
     const [category, setCategory] = useState('DailyTasks');
     const [auth] = useAuth();
     const { userId, token } = auth;
+
     const { updateTasks } = useTasks();
 
-
+    console.log(userId)
+    console.log(token)
     const handleSave = async () => {
         try {
             if (!userId) {
                 console.log('userId is null', userId);
+                setModalVisible(false)
                 ToastAndroid.show("User ID is missing", ToastAndroid.SHORT);
                 return;
             } else {

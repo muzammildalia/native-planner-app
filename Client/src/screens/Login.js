@@ -15,24 +15,6 @@ const Login = () => {
     const [auth, setAuth] = useAuth();
 
     const onPressLogin = async () => {
-        //     await signInWithEmailAndPassword(auth, email, password)
-        //         .then((userCredential) => {
-        //             // Signed in
-        //             const user = userCredential.user;
-        //             // console.log("user data,", user);
-        //             console.log("user data,", user);
-        //             // ...
-        //             navigation.navigate('Home');
-
-        // }
-        //         )
-        //         .catch((error) => {
-        //             const errorCode = error.code;
-        //             const errorMessage = error.message;
-        //             console.log("Error code,", errorCode);
-        //             console.log("Error Message,", errorMessage);
-        //             // ..
-        //         });
         try {
             const res = await clientApi.post('/api/v1/auth/login',
                 { email, password }

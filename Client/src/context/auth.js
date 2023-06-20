@@ -29,7 +29,7 @@ const AuthProvider = ({ children }) => {
                     });
 
                 }
-                // console.log(setAuth)
+                // console.log(auth)
             } catch (error) {
                 console.log("Error retrieving auth data:", error);
             }

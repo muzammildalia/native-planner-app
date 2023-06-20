@@ -29,8 +29,6 @@ const Hindex = () => {
     const currentDay = currentDate.getDate();
     const { tasks, updateTasks } = useTasks();
 
-
-
     const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
 
     const Tab = createMaterialTopTabNavigator();
@@ -65,10 +63,10 @@ const Hindex = () => {
         fetchUserTasks();
     }, []);
 
-    const openTabBasedOnCategory = (category) => {
+    const openTabBasedOnCategory = (task) => {
 
         let tabName = '';
-        switch (category) {
+        switch (task.category) {
             case 'DailyTasks':
                 tabName = 'DailyTasks';
                 break;
@@ -79,7 +77,7 @@ const Hindex = () => {
                 tabName = 'Notes';
                 break;
         }
-        navigation.navigate(tabName);
+        navigation.navigate(tabName, { task });
     }
 
     const EmptyScreen = () => {
