@@ -3,7 +3,7 @@ import { View, Text, Button, TouchableOpacity, ToastAndroid, Alert } from 'react
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { gestureHandlerRootHOC } from 'react-native-gesture-handler';
+import { ScrollView, gestureHandlerRootHOC } from 'react-native-gesture-handler';
 import DailyTasks from '../components/DailyTasks';
 import MasterTasks from '../components/MasterTasks';
 import Notes from '../components/Notes';
@@ -12,7 +12,7 @@ import CalenderScreen from './CalenderScreen';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/auth';
 import clientApi from '../api/clientApi';
-
+import { useTasks } from '../context/Task';
 
 
 const Hindex = () => {
@@ -22,11 +22,14 @@ const Hindex = () => {
     const [auth] = useAuth();
     const { userId } = auth;
     const [loading, setLoading] = useState(true);
-    const [tasks, setTasks] = useState([]);
+    // const [Tasks, setTasks] = useState([]);
     const currentWeekday = currentDate.getDay();
     const daysArray = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = daysArray[currentWeekday];
     const currentDay = currentDate.getDate();
+    const { tasks, updateTasks } = useTasks();
+
+
 
     const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
 
@@ -35,51 +38,57 @@ const Hindex = () => {
 
         navigation.navigate('Calender');
     };
-    // const handlegetusertasks = async () => {
-    //     const [auth] = useAuth();
-    //     const { userId } = auth;
-    //     try {
-    //         const res = await clientApi.post('/api/v1/tasks/create',
-    //             { title, category, text, userId }
-    //         )
-    //         setModalVisible(!modalVisible)
-    //         if (res && res.data.success) {
-    //             ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
-    //         } else {
-    //             ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
-    //         }
-    //         setModalVisible(false);
-    //     } catch (error) {
-    //         setModalVisible(!modalVisible)
-    //         console.log(error);
-    //         ToastAndroid.show("Something went wrong");
-    //         setModalVisible(false);
-    //     }
-    // }
 
-    // useEffect(() => {
-    //     const fetchUserTasks = async () => {
-    //         try {
-    //             const userId = auth.user?._id;
-    //             if (!userId) {
-    //                 setLoading(false);
-    //                 return;
-    //             }
 
-    //             const res = await clientApi.get(
-    //                 `/api/v1/tasks/user-tasks/${userId}`
-    //             );
-    //             setTasks(res.data);
-    //             setLoading(false);
-    //         } catch (error) {
-    //             console.log('Error fetching user Tasks:', error);
-    //             setLoading(false);
-    //             ToastAndroid.show("Error fetching user Tasks");
-    //         }
-    //     };
+    useEffect(() => {
+        const fetchUserTasks = async () => {
+            try {
+                const userId = auth.user?._id;
+                if (!userId) {
+                    setLoading(false);
+                    return;
+                }
 
-    //     fetchUserTasks();
-    // }, [auth]);
+                const res = await clientApi.get(
+                    `/api/v1/tasks/user-tasks/${userId}`
+                );
+
+                updateTasks(res.data);
+                setLoading(false);
+            } catch (error) {
+                console.log('Error fetching user Tasks:', error);
+                setLoading(false);
+                ToastAndroid.show("Error fetching user Tasks");
+            }
+        };
+
+        fetchUserTasks();
+    }, []);
+
+    const openTabBasedOnCategory = (category) => {
+
+        let tabName = '';
+        switch (category) {
+            case 'DailyTasks':
+                tabName = 'DailyTasks';
+                break;
+            case 'MasterTasks':
+                tabName = 'MasterTasks';
+                break;
+            case 'Notes':
+                tabName = 'Notes';
+                break;
+        }
+        navigation.navigate(tabName);
+    }
+
+    const EmptyScreen = () => {
+        return (
+            <View>
+                <Text>Hello World</Text>
+            </View>
+        )
+    }
 
     return (
         <View style={{ flexDirection: "row", width: "100%", height: '100%', marginTop: 10, backgroundColor: 'white' }}>
@@ -115,21 +124,14 @@ const Hindex = () => {
                                 markedDates={{
                                     [selected]: { selected: true, disableTouchEvent: true, selectedDotColor: 'orange' }
                                 }}
-                                // theme={{
-                                //     textDayFontSize: 5,
-                                //     textMonthFontSize: 14,
-                                //     textDayHeaderFontSize: 8,
-                                // }}
                                 style={{
 
                                     borderColor: 'black',
-                                    borderWidth: 1, // Set the border width
-                                    borderColor: 'black', // Set the border color
+                                    borderWidth: 1,
+                                    borderColor: 'black',
                                     borderRadius: 15,
-                                    paddingBottom: 1, // Set the border radius
+                                    paddingBottom: 1,
                                     height: '100%',
-                                    // borderTopLeftRadius: 20,
-                                    // borderTopRightRadius: 20,
                                     marginBottom: 10,
 
                                 }}
@@ -154,18 +156,21 @@ const Hindex = () => {
                                     </View> */}
                                 </View>
                             </View>
-                            <View style={styles.innerContainer}>
+                            <ScrollView style={styles.innerContainer}>
                                 {tasks.map((task) => (
+
                                     <View key={task._id} style={{ paddingBottom: 10 }}>
-                                        <TouchableOpacity style={styles.button} onPress={this.onPress}>
+                                        <TouchableOpacity style={styles.button} onPress={() => openTabBasedOnCategory(task.category)}>
                                             <View style={styles.textContainer}>
                                                 <Text style={styles.taskName}>{task.title}</Text>
+                                                <Text style={styles.taskName}>{task.category}</Text>
                                                 <Text style={styles.time}>{new Date(task.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
                                             </View>
                                         </TouchableOpacity>
                                     </View>
+
                                 ))}
-                            </View>
+                            </ScrollView>
                         </View>
                     </SafeAreaView>
                 </View>
@@ -192,14 +197,21 @@ const Hindex = () => {
                                 // tabBarInactiveBackgroundColor: 'white',
                             }}
                             style={styles.heading}
+                            tabBarOptions={{
+                                tabStyle: {
+                                    // Adjust the width or size of the tabs as needed
+                                    width: 180, // Example: set a fixed width of 100
+                                },
+                                scrollEnabled: true,
+                            }}
                         >
                             <Tab.Screen name="DailyTasks" component={DailyTasks} />
                             <Tab.Screen name="MasterTasks" component={MasterTasks} />
                             <Tab.Screen name="Notes" component={Notes} />
-                            <Tab.Screen name="Contacts" component={DailyTasks} />
-                            <Tab.Screen name="Goals" component={MasterTasks} />
-                            <Tab.Screen name="ToDoList" component={DailyTasks} />
-                            <Tab.Screen name="Milage" component={MasterTasks} />
+                            <Tab.Screen name="Contacts" component={EmptyScreen} />
+                            <Tab.Screen name="Goals" component={EmptyScreen} />
+                            <Tab.Screen name="ToDoList" component={EmptyScreen} />
+                            <Tab.Screen name="Milage" component={EmptyScreen} />
                         </Tab.Navigator>
                     </View>
                 </View>

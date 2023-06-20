@@ -4,7 +4,7 @@ import { gestureHandlerRootHOC } from 'react-native-gesture-handler';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { useAuth } from "../context/auth";
 import clientApi from '../api/clientApi';
-
+import { useTasks } from '../context/Task';
 
 const DailyTasks = () => {
     const [text, setText] = useState('');
@@ -13,9 +13,9 @@ const DailyTasks = () => {
     const [category, setCategory] = useState('DailyTasks');
     const [auth] = useAuth();
     const { userId, token } = auth;
+    const { updateTasks } = useTasks();
 
-    // console.log(userId);
-    // console.log(token)
+
     const handleSave = async () => {
         try {
             if (!userId) {
@@ -23,12 +23,19 @@ const DailyTasks = () => {
                 ToastAndroid.show("User ID is missing", ToastAndroid.SHORT);
                 return;
             } else {
+                const headers = {
+                    Authorization: token
+                };
                 const res = await clientApi.post('/api/v1/tasks/create',
-                    { title, category, text, userId }
+                    { title, category, text, userId },
+                    { headers }
                 );
                 setModalVisible(!modalVisible)
                 if (res && res.data.success) {
+                    const updatedRes = await clientApi.get(`/api/v1/tasks/user-tasks/${userId}`);
+                    const updatedTasks = updatedRes.data;
                     ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
+                    updateTasks(updatedTasks);
                 } else {
                     ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
                 }

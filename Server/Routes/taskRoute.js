@@ -7,7 +7,7 @@ import { requireSignIn } from '../Middlewares/authMiddleware.js';
 const router = express.Router()
 
 
-router.post('/create', createTasksController)
+router.post('/create', requireSignIn, createTasksController)
 
 router.get("/user-tasks/:userId", getTasksController);
 

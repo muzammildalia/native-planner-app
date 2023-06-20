@@ -11,6 +11,8 @@ import Logout from './src/components/Logout'
 import CalenderScreen from './src/screens/CalenderScreen';
 import Setting from './src/screens/Setting';
 import { AuthProvider } from './src/context/auth.js';
+import { TasksProvider } from './src/context/Task';
+
 
 function EmptyScreen() {
   return (
@@ -48,25 +50,27 @@ function Root() {
 function App() {
   return (
     <AuthProvider>
-      < NavigationContainer >
-        <Stack.Navigator>
+      <TasksProvider>
+        < NavigationContainer >
+          <Stack.Navigator>
 
-          {/* <Stack.Screen name="Calender" component={CalenderScreen} /> */}
-          <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="Register" component={Register} />
-          <Stack.Screen
-            name="Root"
-            component={Root}
-            options={{ headerShown: false }}
-          />
-
-
-
+            {/* <Stack.Screen name="Calender" component={CalenderScreen} /> */}
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen
+              name="Root"
+              component={Root}
+              options={{ headerShown: false }}
+            />
 
 
-          {/* <Stack.Screen name="Home" component={Hindex} /> */}
-        </Stack.Navigator>
-      </NavigationContainer >
+
+
+
+            {/* <Stack.Screen name="Home" component={Hindex} /> */}
+          </Stack.Navigator>
+        </NavigationContainer >
+      </TasksProvider>
     </AuthProvider>
   );
 }
