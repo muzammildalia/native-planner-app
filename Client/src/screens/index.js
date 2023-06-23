@@ -63,10 +63,12 @@ const Hindex = () => {
         fetchUserTasks();
     }, []);
 
-    const openTabBasedOnCategory = (task) => {
 
+    const openTabBasedOnCategory = ({ category, _id, text, title }) => {
         let tabName = '';
-        switch (task.category) {
+        // let props = { id: _id, desc: text };
+
+        switch (category) {
             case 'DailyTasks':
                 tabName = 'DailyTasks';
                 break;
@@ -77,7 +79,8 @@ const Hindex = () => {
                 tabName = 'Notes';
                 break;
         }
-        navigation.navigate(tabName, { task });
+        navigation.navigate(tabName, { id: _id, desc: text, head: title });
+        console.log(tabName, { id: _id, desc: text, head: title })
     }
 
     const EmptyScreen = () => {
@@ -101,7 +104,7 @@ const Hindex = () => {
                     </View>
                     <View style={{ height: '25%', flexDirection: 'row' }}>
                         <View style={{ flexDirection: "column", height: 320, justifyContent: 'flex-end' }}>
-                            <TouchableOpacity style={{ justifyContent: 'flex-end', marginTop: 50 }}
+                            <TouchableOpacity style={{ justifyContent: 'flex-end', paddingBottom: 10 }}
                                 onPress={calendarScreen}
                             >
                                 <Ionicons name="add-circle-outline" size={40} color="red" />
@@ -157,8 +160,8 @@ const Hindex = () => {
                             <ScrollView style={styles.innerContainer}>
                                 {tasks.map((task) => (
 
-                                    <View key={task._id} style={{ paddingBottom: 10 }}>
-                                        <TouchableOpacity style={styles.button} onPress={() => openTabBasedOnCategory(task.category)}>
+                                    <View style={{ paddingBottom: 10 }}>
+                                        <TouchableOpacity key={task._id} style={styles.button} onPress={() => openTabBasedOnCategory(task)}>
                                             <View style={styles.textContainer}>
                                                 <Text style={styles.taskName}>{task.title}</Text>
                                                 <Text style={styles.taskName}>{task.category}</Text>
@@ -182,6 +185,7 @@ const Hindex = () => {
                         <Tab.Navigator initialRouteName={"DailyTasks"}
                             // tabBarOptions={customTabBarStyle}
                             screenOptions={{
+                                swipeEnabled: false,
                                 tabBarActiveTintColor: 'white',
                                 tabBarLabelStyle: { fontSize: 10 },
                                 tabBarStyle: {
@@ -203,8 +207,15 @@ const Hindex = () => {
                                 scrollEnabled: true,
                             }}
                         >
-                            <Tab.Screen name="DailyTasks" component={DailyTasks} />
-                            <Tab.Screen name="MasterTasks" component={MasterTasks} />
+                            <Tab.Screen name="DailyTasks" component={DailyTasks}
+                                // options={({ route }) => ({                                
+                                // desc: route.params?.desc
+                                // })}
+                                initialParams={{ id: '', desc: '' }}
+                            />
+                            <Tab.Screen name="MasterTasks" component={MasterTasks}
+                                initialParams={{ id: '', desc: '' }}
+                            />
                             <Tab.Screen name="Notes" component={Notes} />
                             <Tab.Screen name="Contacts" component={EmptyScreen} />
                             <Tab.Screen name="Goals" component={EmptyScreen} />

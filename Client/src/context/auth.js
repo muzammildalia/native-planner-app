@@ -9,7 +9,6 @@ const AuthProvider = ({ children }) => {
         user: null,
         userId: "",
         token: "",
-
     });
 
     //default axios

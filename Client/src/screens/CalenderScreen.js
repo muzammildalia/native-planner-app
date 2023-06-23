@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     },
     rowContainer: {
         flexDirection: 'row',
-
+        paddingTop: 20,
         height: 320
     },
     calendarContainer: {
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between'
     },
     calendarHeader: {
-        paddingBottom: 10,
+        // paddingBottom: 0,
 
     }
 });

@@ -7,48 +7,42 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import clientApi from '../api/clientApi';
 import { ToastAndroid } from 'react-native';
 
-const Login = () => {
-
+const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigation = useNavigation();
     const [auth, setAuth] = useAuth();
 
-    const onPressLogin = async () => {
-        try {
-            const res = await clientApi.post('/api/v1/auth/login',
-                { email, password }
-            )
-            console.log("res", res)
-            if (res && res.data.success) {
-                ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
-                const { user, token } = res.data;
-                setAuth({
-                    ...auth,
-                    user,
-                    token,
-                });
-                await AsyncStorage.setItem("auth", JSON.stringify(res.data));
-                navigation.navigate("Root");
-            } else {
-                ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
-            }
-        } catch (error) {
-            console.log(error);
-            ToastAndroid.show("Something went wrong", ToastAndroid.SHORT);
-        }
+    const onPressResetPassword = async () => {
+        // try {
+        //     const res = await clientApi.post('/api/v1/auth/login',
+        //         { email, password }
+        //     )
+        //     if (res && res.data.success) {
+        //         ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
+        //         const { user, token } = res.data;
+        //         setAuth({
+        //             ...auth,
+        //             user,
+        //             token,
+        //         });
+        //         await AsyncStorage.setItem("auth", JSON.stringify(res.data));
+        //         navigation.navigate("Root");
+        //     } else {
+        //         ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
+        //     }
+        // } catch (error) {
+        //     console.log(error);
+        //     ToastAndroid.show("Something went wrong", ToastAndroid.SHORT);
+        // }
 
 
     }
-    const onPressForgotPassword = () => {
-        navigation.navigate('ForgotPassword');
-    };
-    const onPressSignUp = () => {
-        navigation.navigate('Register');
-    };
+
+
     return (
         <KeyboardAvoidingView style={styles.container}>
-            <Text style={styles.title}> Login </Text>
+            <Text style={styles.title}> Reset Password </Text>
             {/* <View style={styles.inputView}>
                 <TextInput
                     style={styles.inputText}
@@ -78,38 +72,16 @@ const Login = () => {
                 />
             </View>
             <TouchableOpacity
-                onPress={onPressLogin}
+                onPress={onPressResetPassword}
                 style={styles.loginBtn}>
                 <Text style={styles.loginText}>LOGIN </Text>
             </TouchableOpacity>
-            <View style={styles.singupandforgotcont}>
-                <TouchableOpacity
-                    onPress={onPressSignUp}
-                >
-                    <Text style={styles.signup}>Signup</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={onPressForgotPassword}
-                >
-                    <Text style={styles.forgot}>Forgot Password?</Text>
-                </TouchableOpacity>
 
-            </View>
-            <Text style={styles.loginfb}> OR </Text>
-            <Text style={styles.loginfb}> Login from  </Text>
-            {/* <Text style={styles.loginfb}> Facebook  </Text> */}
-            <View style={{
-                marginTop: 30
-            }}>
-                <TouchableOpacity>
-                    <FontAwesome5 name="facebook" size={40} color="#1E4FAD" />
-                </TouchableOpacity>
-            </View>
         </KeyboardAvoidingView>
     )
 }
 
-export default Login
+export default ForgotPassword
 
 const styles = StyleSheet.create({
 

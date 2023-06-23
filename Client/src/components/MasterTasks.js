@@ -1,21 +1,36 @@
-import { View, ImageBackground, TextInput, Text, TouchableOpacity, StyleSheet, Modal, Alert, Pressable, ToastAndroid } from 'react-native'
+import { View, ImageBackground, TextInput, Text, TouchableOpacity, StyleSheet, Modal, Alert, Pressable, ToastAndroid, Button } from 'react-native'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { useAuth } from '../context/auth';
 import clientApi from '../api/clientApi';
 import { useTasks } from '../context/Task';
+import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
+import * as Permissions from 'expo-permissions';
+import * as FileSystem from 'expo-file-system';
 
-const MasterTasks = () => {
+const MasterTasks = ({ navigation, route }) => {
     // const [mastertext, setMasterText] = useState('');
-    const [text, setText] = useState('');
+    const Data = route.params;
+
+    console.log('MData.DESC', Data.desc)
+
+    const [text, setText] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
-    const [title, setTitle] = useState('');
+    const [title, setTitle] = useState(Data.title ? Data.title : '');
     const [category, setCategory] = useState('MasterTasks');
     const [auth] = useAuth();
     const { userId, token } = auth;
     const { updateTasks } = useTasks();
+    const [image, setImage] = useState(null);
+    const [recording, setRecording] = useState(null);
+    const [sound, setSound] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
 
+
+
+    // console.log("Mtext", id, desc, head)
     const handleSave = async () => {
         try {
             if (!userId) {
@@ -49,7 +64,102 @@ const MasterTasks = () => {
 
         }
     }
+    const startRecording = async () => {
+        try {
+            const recordingOptions = {
+                android: {
+                    extension: '.m4a',
+                    outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+                    audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+                    sampleRate: 44100,
+                    numberOfChannels: 2,
+                    bitRate: 128000,
+                },
+                ios: {
+                    extension: '.m4a',
+                    audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_MEDIUM,
+                    sampleRate: 44100,
+                    numberOfChannels: 2,
+                    bitRate: 128000,
+                    linearPCMBitDepth: 16,
+                    linearPCMIsBigEndian: false,
+                    linearPCMIsFloat: false,
+                },
+            };
 
+            const recording = new Audio.Recording();
+            await recording.prepareToRecordAsync(recordingOptions);
+            await recording.startAsync();
+            setRecording(recording);
+        } catch (error) {
+            // Handle recording start error
+            console.error('Failed to start recording', error);
+        }
+    };
+
+    const stopRecording = async () => {
+        try {
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            setRecording(null);
+
+            // Create a new folder for saving the recording
+            const folderName = 'recordings';
+            const folderUri = FileSystem.documentDirectory + folderName;
+            await FileSystem.makeDirectoryAsync(folderUri, { intermediates: true });
+
+            // Save the recording inside the new folder
+            const fileInfo = await FileSystem.getInfoAsync(uri);
+            const fileUri = fileInfo.uri;
+            const newUri = folderUri + '/recordedAudio.m4a';
+            await FileSystem.moveAsync({
+                from: fileUri,
+                to: newUri,
+            });
+            console.log(newUri)
+            // Do something with the saved audio file URI (newUri)
+            const { sound: newSound } = await Audio.Sound.createAsync(
+                { uri: newUri },
+                { shouldPlay: false }
+            );
+            setSound(newSound);
+        } catch (error) {
+            // Handle recording stop error
+            console.error('Failed to stop recording', error);
+        }
+    };
+    const playPauseAudio = async () => {
+        if (sound === null) return;
+
+        if (isPlaying) {
+            await sound.pauseAsync();
+        } else {
+            await sound.playAsync();
+        }
+        setIsPlaying(!isPlaying);
+    };
+    const pickImage = async () => {
+        // No permissions request is necessary for launching the image library
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
+
+        console.log(result);
+
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+        }
+    };
+
+    useEffect(() => {
+        if (route.params && route.params.desc) {
+            setText(route.params.desc);
+            setTitle(route.params.head)
+        }
+    }, [route.params]);
     return (
         <View style={{
             flex: 1,
@@ -79,13 +189,15 @@ const MasterTasks = () => {
                         right: 0
                     }}
                     >
+
                         <View>
+
 
                             <TextInput
                                 // editable
                                 // autoFocus
                                 multiline
-                                onChangeText={(text) => setText(text)}
+                                onChangeText={(newtext) => setText(newtext)}
                                 value={text}
                                 numberOfLines={25}
                                 maxLength={400}
@@ -101,6 +213,7 @@ const MasterTasks = () => {
                                     // alignItems: 'flex-start'
                                 }}
                             />
+
                         </View>
                         <View style={styles.buttonview}>
                             <TouchableOpacity style={styles.Touchablebutton} onPress={() => setModalVisible(true)} >
