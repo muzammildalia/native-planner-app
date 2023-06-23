@@ -23,8 +23,6 @@ const Notes = () => {
     const [image, setImage] = useState(null);
     const [scrollEnabled, setScrollEnabled] = useState(true);
     const [isZoomed, setIsZoomed] = useState(false);
-    // const [sound, setSound] = useState(null);
-    // const [isPlaying, setIsPlaying] = useState(false);
     const handleZoom = (event) => {
         setIsZoomed(event.zoomLevel > 1);
     };
@@ -152,46 +150,44 @@ const Notes = () => {
     //     setIsPlaying(!isPlaying);
     // };
     return (
-        // <View style={{
-        //     flex: 1,
-        // }}>
-        // <Text> Hello world</Text>
-        // <TouchableWithoutFeedback onPress={handleTouch}>
-        <ReactNativeZoomableView
-            scrollEnabled={false}
-            maxZoom={2}
-            minZoom={1}
-            zoomStep={0.5}
-            initialZoom={1}
-            bindToBorders={true}
-            onZoomAfter={this.logOutZoomState}
-            panEnabled={false}
-            panBoundaryPadding={0}
-            doubleTapZoomToCenter={true}
-            style={{
-            }}
-        >
-            <View style={{
-                justifyContent: 'center',
-                alignItems: 'center'
-            }} >
-                <ImageBackground source={require('../../assets/not2.jpg')} style={{
-                    width: '100%',
-                    height: Dimensions.get('window').height / 1.2,
-                    position: 'absolute',
-
-
+        <View style={{
+            flex: 1,
+        }}>
+            <ReactNativeZoomableView
+                scrollEnabled={false}
+                maxZoom={2}
+                minZoom={1}
+                zoomStep={0.5}
+                initialZoom={1}
+                bindToBorders={true}
+                onZoomAfter={this.logOutZoomState}
+                panEnabled={false}
+                panBoundaryPadding={0}
+                doubleTapZoomToCenter={true}
+                style={{
                 }}
-                    resizeMode="cover" >
-                    {/* <View style={{ flexDirection: 'row-reverse' }}> */}
-                    {/* <View style={{ alignItems: 'flex-end' }}>
+            >
+                <View style={{
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }} >
+                    <ImageBackground source={require('../../assets/not2.jpg')} style={{
+                        width: '100%',
+                        height: Dimensions.get('window').height / 1.2,
+                        position: 'absolute',
+
+
+                    }}
+                        resizeMode="cover" >
+                        {/* <View style={{ flexDirection: 'row-reverse' }}> */}
+                        {/* <View style={{ alignItems: 'flex-end' }}>
                                 <View style={{ width: "100%", }}>
                                     <Button title="Attachment" onPress={pickImage} style={{ backgroundColor: 'black' }} />
                                     {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
                                 </View>
                             </View> */}
 
-                    {/* <View>
+                        {/* <View>
                                 {sound && (
                                     <Button
                                         title={isPlaying ? 'Pause' : 'Play'}
@@ -199,28 +195,12 @@ const Notes = () => {
                                     />
                                 )}
                             </View> */}
-                    {/* </View> */}
+                        {/* </View> */}
 
-                    {isTextInputEnabled ? (
-                        <><DrawWithOptions
-                            linearGradient={LinearGradient}
-
-                            close={() => true}
-                            takeSnapshot={(snap) => {
-                                snap.then((uri) => {
-                                    saveSnapshot(uri);
-                                    ToastAndroid.show(uri, ToastAndroid.SHORT);
-                                });
-                            }}
-                        />
-                            <TextInput value={inputText}
-                                onChangeText={setInputText}
-                                // onBlur={handleSave}
-                                autoFocus multiline style={styles.textcontainer} />
-                        </>) : (<>
-                            <Text style={styles.textcontainer}>{inputText} </Text>
-                            <DrawWithOptions
+                        {isTextInputEnabled ? (
+                            <><DrawWithOptions
                                 linearGradient={LinearGradient}
+
                                 close={() => true}
                                 takeSnapshot={(snap) => {
                                     snap.then((uri) => {
@@ -228,8 +208,24 @@ const Notes = () => {
                                         ToastAndroid.show(uri, ToastAndroid.SHORT);
                                     });
                                 }}
-                            /></>)}
-                    {/* <View style={{ width: '100%', fontSize: 15, position: 'absolute', marginTop: 80, alignItems: 'flex-end' }}>
+                            />
+                                <TextInput value={inputText}
+                                    onChangeText={setInputText}
+                                    // onBlur={handleSave}
+                                    autoFocus multiline style={styles.textcontainer} />
+                            </>) : (<>
+                                <Text style={styles.textcontainer}>{inputText} </Text>
+                                <DrawWithOptions
+                                    linearGradient={LinearGradient}
+                                    close={() => true}
+                                    takeSnapshot={(snap) => {
+                                        snap.then((uri) => {
+                                            saveSnapshot(uri);
+                                            ToastAndroid.show(uri, ToastAndroid.SHORT);
+                                        });
+                                    }}
+                                /></>)}
+                        {/* <View style={{ width: '100%', fontSize: 15, position: 'absolute', marginTop: 80, alignItems: 'flex-end' }}>
                             <Text>{message}</Text>
                             <Button
                                 title={recording ? 'Stop Recording' : 'Start Recording'}
@@ -237,44 +233,43 @@ const Notes = () => {
                             {getRecordingLines()}
 
                         </View> */}
-                    {/* <View style={{}}>
+                        {/* <View style={{}}>
                             <View>
                                 <Button title='Start Recording' />
                                 <Button title='Attachment' />
                             </View>
                         </View> */}
-                    <View
-                        style={[
-                            styles.btncontainer,
-                            {
-                                // Try setting flexDirection to "row".
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                height: ' 50%',
-                            },
-                        ]}>
-                        <View style={{ alignSelf: 'flex-start' }} >
-                            <Button title="Attachment" onPress={pickImage} style={{ backgroundColor: 'black' }} />
-                            {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
+                        <View
+                            style={[
+                                styles.btncontainer,
+                                {
+                                    // Try setting flexDirection to "row".
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    height: ' 50%',
+                                },
+                            ]}>
+                            <View style={{ alignSelf: 'flex-start' }} >
+                                <Button title="Attachment" onPress={pickImage} style={{ backgroundColor: 'black' }} />
+                                {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
+                            </View>
+                            <View style={{ alignSelf: 'flex-start' }}>
+                                <Button
+                                    title={recording ? 'Stop Recording' : 'Start Recording'}
+                                    onPress={recording ? stopRecording : startRecording} />
+                                {getRecordingLines()}
+                            </View>
                         </View>
-                        <View style={{ alignSelf: 'flex-start' }}>
-                            <Button
-                                title={recording ? 'Stop Recording' : 'Start Recording'}
-                                onPress={recording ? stopRecording : startRecording} />
-                            {getRecordingLines()}
-                        </View>
-                    </View>
-                    <Button
-                        title={isTextInputEnabled ? 'Drawing' : 'Text'}
-                        onPress={handleToggleInput}
-                        style={{ marginBottom: 20 }}
-                    />
+                        <Button
+                            title={isTextInputEnabled ? 'Drawing' : 'Text'}
+                            onPress={handleToggleInput}
+                            style={{ marginBottom: 20 }}
+                        />
 
-                </ImageBackground>
-            </View>
-        </ReactNativeZoomableView>
-        // </TouchableWithoutFeedback>
-        // </View>
+                    </ImageBackground>
+                </View>
+            </ReactNativeZoomableView>
+        </View>
     )
 }
 
