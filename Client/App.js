@@ -12,64 +12,61 @@ import CalenderScreen from './src/screens/CalenderScreen';
 import Setting from './src/screens/Setting';
 import { AuthProvider } from './src/context/auth.js';
 import { TasksProvider } from './src/context/Task';
+import ForgotPassword from './src/screens/ForgotPassword';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MainNavigation from './src/Navigation';
+
+// function EmptyScreen() {
+//   return (
+//     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+//       <Text>Home Screen</Text>
+//     </View>
+//   );
+// }
+
+// const Drawer = createDrawerNavigator();
+// const Stack = createNativeStackNavigator();
 
 
-function EmptyScreen() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Home Screen</Text>
-    </View>
-  );
-}
-
-
-const Drawer = createDrawerNavigator();
-const Stack = createNativeStackNavigator();
-function Root() {
-  return (
-    <Drawer.Navigator
-      initialRouteName="Home"
-      useLegacyImplementation
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#B9D5FF'
-        },
-        drawerStyle: {
-          backgroundColor: '#B9D5FF',
-          width: 240,
-        },
-      }}
-    >
-      <Drawer.Screen name="Home" component={Hindex} />
-      <Drawer.Screen name="Calender" component={CalenderScreen} />
-      <Drawer.Screen name="Logout" component={Logout} />
-      <Stack.Screen name="Settings" component={Setting} />
-    </Drawer.Navigator>
-  );
-}
+// function Root() {
+//   return (
+//     <Drawer.Navigator
+//       initialRouteName="Home"
+//       useLegacyImplementation
+//       screenOptions={{
+//         headerStyle: {
+//           backgroundColor: '#B9D5FF'
+//         },
+//         drawerStyle: {
+//           backgroundColor: '#B9D5FF',
+//           width: 240,
+//         },
+//       }}
+//     >
+//       <Drawer.Screen name="Home" component={Hindex} />
+//       <Drawer.Screen name="Calender" component={CalenderScreen} />
+//       <Drawer.Screen name="Logout" options={{ title: 'Logout', headerShown: false }} component={Login} />
+//       <Drawer.Screen name="Settings" component={Setting} />
+//     </Drawer.Navigator>
+//   );
+// }
 function App() {
   return (
     <AuthProvider>
       <TasksProvider>
-        < NavigationContainer >
+        {/* <NavigationContainer>
           <Stack.Navigator>
-
-            {/* <Stack.Screen name="Calender" component={CalenderScreen} /> */}
             <Stack.Screen name="Login" component={Login} />
             <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
             <Stack.Screen
               name="Root"
               component={Root}
               options={{ headerShown: false }}
             />
-
-
-
-
-
-            {/* <Stack.Screen name="Home" component={Hindex} /> */}
           </Stack.Navigator>
-        </NavigationContainer >
+        </NavigationContainer> */}
+        <MainNavigation />
       </TasksProvider>
     </AuthProvider>
   );

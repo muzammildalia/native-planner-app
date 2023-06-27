@@ -13,7 +13,7 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const navigation = useNavigation();
     const [auth, setAuth] = useAuth();
-
+    console.log("login screen", auth)
     const onPressLogin = async () => {
         try {
             const res = await clientApi.post('/api/v1/auth/login',
@@ -32,6 +32,7 @@ const Login = () => {
                 navigation.navigate("Root");
             } else {
                 ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
+                console.log(res.data.message)
             }
         } catch (error) {
             console.log(error);

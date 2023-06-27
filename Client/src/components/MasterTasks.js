@@ -1,45 +1,57 @@
-import { View, ImageBackground, TextInput, Text, TouchableOpacity, StyleSheet, Modal, Alert, Pressable, ToastAndroid, Button } from 'react-native'
-
-import React, { useEffect, useState } from 'react'
+import { View, ImageBackground, TextInput, Text, TouchableOpacity, PanResponder, Animated, StyleSheet, Modal, Alert, Pressable, ToastAndroid, Button, Dimensions, Image, Platform } from 'react-native'
+import React, { useRef, useEffect, useState } from 'react'
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
-import { useAuth } from '../context/auth';
+import { useAuth } from "../context/auth";
 import clientApi from '../api/clientApi';
 import { useTasks } from '../context/Task';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import * as Permissions from 'expo-permissions';
 import * as FileSystem from 'expo-file-system';
+import {
+    DrawWithOptions,
+    DrawProvider,
+} from '@archireport/react-native-svg-draw';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
+import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 
-const MasterTasks = ({ navigation, route }) => {
-    // const [mastertext, setMasterText] = useState('');
+const MasterTasks = ({ route }) => {
     const Data = route.params;
+    // console.log("dATA.DESC", Data.desc)
+    const [text, setText] = useState('');
 
-    console.log('MData.DESC', Data.desc)
-
-    const [text, setText] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
-    const [title, setTitle] = useState(Data.title ? Data.title : '');
+    const [title, setTitle] = useState('');
+
     const [category, setCategory] = useState('MasterTasks');
     const [auth] = useAuth();
     const { userId, token } = auth;
-    const { updateTasks } = useTasks();
-    const [image, setImage] = useState(null);
-    const [recording, setRecording] = useState(null);
     const [sound, setSound] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [recording, setRecording] = useState();
+    const [recordings, setRecordings] = useState([]);
+    const [message, setMessage] = useState("");
+    const pan = useRef(new Animated.ValueXY()).current;
+    const [image, setImage] = useState(null);
+    const [isTextInputEnabled, setIsTextInputEnabled] = useState(false);
 
+    // console.log("Dailytext", Data.id, Data.desc, Data.head)
 
-
-    // console.log("Mtext", id, desc, head)
+    const { updateTasks } = useTasks();
     const handleSave = async () => {
         try {
             if (!userId) {
                 console.log('userId is null', userId);
+                setModalVisible(false)
                 ToastAndroid.show("User ID is missing", ToastAndroid.SHORT);
                 return;
             } else {
                 const headers = {
-                    Authorization: token // Add the token to the Authorization header
+                    Authorization: token
                 };
                 const res = await clientApi.post('/api/v1/tasks/create',
                     { title, category, text, userId },
@@ -64,79 +76,19 @@ const MasterTasks = ({ navigation, route }) => {
 
         }
     }
-    const startRecording = async () => {
-        try {
-            const recordingOptions = {
-                android: {
-                    extension: '.m4a',
-                    outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
-                    audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
-                    sampleRate: 44100,
-                    numberOfChannels: 2,
-                    bitRate: 128000,
-                },
-                ios: {
-                    extension: '.m4a',
-                    audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_MEDIUM,
-                    sampleRate: 44100,
-                    numberOfChannels: 2,
-                    bitRate: 128000,
-                    linearPCMBitDepth: 16,
-                    linearPCMIsBigEndian: false,
-                    linearPCMIsFloat: false,
-                },
-            };
-
-            const recording = new Audio.Recording();
-            await recording.prepareToRecordAsync(recordingOptions);
-            await recording.startAsync();
-            setRecording(recording);
-        } catch (error) {
-            // Handle recording start error
-            console.error('Failed to start recording', error);
-        }
-    };
-
-    const stopRecording = async () => {
-        try {
-            await recording.stopAndUnloadAsync();
-            const uri = recording.getURI();
-            setRecording(null);
-
-            // Create a new folder for saving the recording
-            const folderName = 'recordings';
-            const folderUri = FileSystem.documentDirectory + folderName;
-            await FileSystem.makeDirectoryAsync(folderUri, { intermediates: true });
-
-            // Save the recording inside the new folder
-            const fileInfo = await FileSystem.getInfoAsync(uri);
-            const fileUri = fileInfo.uri;
-            const newUri = folderUri + '/recordedAudio.m4a';
-            await FileSystem.moveAsync({
-                from: fileUri,
-                to: newUri,
-            });
-            console.log(newUri)
-            // Do something with the saved audio file URI (newUri)
-            const { sound: newSound } = await Audio.Sound.createAsync(
-                { uri: newUri },
-                { shouldPlay: false }
-            );
-            setSound(newSound);
-        } catch (error) {
-            // Handle recording stop error
-            console.error('Failed to stop recording', error);
-        }
-    };
-    const playPauseAudio = async () => {
-        if (sound === null) return;
-
-        if (isPlaying) {
-            await sound.pauseAsync();
+    const saveSnapshot = async (uri) => {
+        const permission = await MediaLibrary.requestPermissionsAsync();
+        if (permission.granted) {
+            await MediaLibrary.saveToLibraryAsync(uri); // Save the snapshot to the device's photo library on Android
+            console.log('Snapshot saved successfully:', uri);
         } else {
-            await sound.playAsync();
+            console.log('Permission to access media library not granted.');
         }
-        setIsPlaying(!isPlaying);
+    };
+
+
+    const handleToggleInput = () => {
+        setIsTextInputEnabled((prevIsTextInputEnabled) => !prevIsTextInputEnabled);
     };
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
@@ -153,72 +105,184 @@ const MasterTasks = ({ navigation, route }) => {
             setImage(result.assets[0].uri);
         }
     };
+    const removeImage = () => {
+        setImage(null);
+    };
 
+    async function startRecording() {
+        try {
+            const permission = await Audio.requestPermissionsAsync();
+
+            if (permission.status === "granted") {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true
+                });
+
+                const { recording } = await Audio.Recording.createAsync(
+                    Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+                );
+
+                setRecording(recording);
+            } else {
+                setMessage("Please grant permission to app to access microphone");
+            }
+        } catch (err) {
+            console.error('Failed to start recording', err);
+        }
+    }
+    async function stopRecording() {
+        setRecording(undefined);
+        await recording.stopAndUnloadAsync();
+
+        let updatedRecordings = [...recordings];
+        const { sound, status } = await recording.createNewLoadedSoundAsync();
+        updatedRecordings.push({
+            sound: sound,
+            duration: getDurationFormatted(status.durationMillis),
+            file: recording.getURI()
+        });
+
+        setRecordings(updatedRecordings);
+    }
+
+    function getDurationFormatted(millis) {
+        const minutes = millis / 1000 / 60;
+        const minutesDisplay = Math.floor(minutes);
+        const seconds = Math.round((minutes - minutesDisplay) * 60);
+        const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds;
+        return `${minutesDisplay}:${secondsDisplay}`;
+    }
+    function RecordingLine({ recordingLine, index }) {
+        const [isPlaying, setIsPlaying] = useState(false);
+        const sound = recordingLine.sound;
+
+        const handlePlaybackToggle = async () => {
+            if (isPlaying) {
+                // Pause the playback
+                await sound.pauseAsync();
+            } else {
+                // Start or resume the playback
+                await sound.playAsync();
+            }
+            setIsPlaying(!isPlaying);
+        };
+
+        return (
+            <View style={styles.row}>
+                <Text>Recording {index + 1} - {recordingLine.duration}</Text>
+                <Button style={styles.button} onPress={handlePlaybackToggle} title={isPlaying ? 'Pause' : 'Play'}></Button>
+                <Button style={styles.button} onPress={() => Sharing.shareAsync(recordingLine.file)} title="Share"></Button>
+            </View>
+        );
+    }
+    function getRecordingLines() {
+        return recordings.map((recordingLine, index) => {
+            return <RecordingLine key={index} recordingLine={recordingLine} index={index} />;
+        });
+    }
     useEffect(() => {
         if (route.params && route.params.desc) {
             setText(route.params.desc);
             setTitle(route.params.head)
         }
     }, [route.params]);
+    const panResponder = PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: Animated.event([
+            null,
+            { dx: pan.x, dy: pan.y }
+        ], { useNativeDriver: false }),
+        onPanResponderRelease: () => {
+            pan.flattenOffset(); // This will set the offset to the current value and reset value to zero
+        },
+        onPanResponderGrant: () => {
+            pan.setOffset({
+                x: pan.x._value,
+                y: pan.y._value
+            }); // This will set the offset to the current value when the pan starts
+        }
+    });
     return (
         <View style={{
             flex: 1,
         }}>
             <ReactNativeZoomableView
-                maxZoom={1.5}
-                minZoom={0.5}
+                disablePanOnInitialZoom={true}
+                scrollEnabled={false}
+                maxZoom={2}
+                minZoom={1}
                 zoomStep={0.5}
                 initialZoom={1}
                 bindToBorders={true}
                 onZoomAfter={this.logOutZoomState}
+                panEnabled={false}
                 panBoundaryPadding={0}
-                doubleTapZoomToCenter={1}
+                doubleTapZoomToCenter={true}
                 style={{
                 }}
             >
                 <View style={{
-                    justifyContent: 'flex-start',
-                    alignItems: 'flex-start'
-                }}>
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }} >
                     <ImageBackground source={require('../../assets/table2.png')} style={{
                         width: '100%',
-                        height: 800,
+                        height: Dimensions.get('window').height / 1.21,
                         position: 'absolute',
-                        top: -295,
-                        left: -362,
-                        right: 0
                     }}
-                    >
+                        resizeMode="cover" >
 
-                        <View>
+                        {isTextInputEnabled ? (
+                            <>
+                                <TextInput
+                                    value={text}
+                                    onChangeText={(newtext) => setText(newtext)}
+                                    autoFocus
+                                    multiline
+                                    editable
+                                    style={styles.textcontainer} />
+                            </>) : (<>
+                                <Text style={styles.textcontainer}>{text} </Text>
+                                <DrawWithOptions
+                                    linearGradient={LinearGradient}
+                                    close={() => true}
+                                    takeSnapshot={(snap) => {
+                                        snap.then((uri) => {
+                                            saveSnapshot(uri);
+                                            ToastAndroid.show(uri, ToastAndroid.SHORT);
+                                        });
+                                    }}
+                                /></>)}
+                        <Animated.View {...panResponder.panHandlers} style={[pan.getLayout(), styles.btncontainer, { width: 200, height: 200 }]}>
+                            <View style={{ flexDirection: 'column' }} >
+                                {image && (
+                                    <>
+                                        <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />
+                                        <TouchableOpacity onPress={removeImage} style={styles.removebtn}>
+                                            <FontAwesome name="remove" size={30} color="#B9D5FF" />
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                            </View>
 
+                        </Animated.View>
+                        <View
+                            style={[
+                                styles.btncontainer,
+                                {
 
-                            <TextInput
-                                // editable
-                                // autoFocus
-                                multiline
-                                onChangeText={(newtext) => setText(newtext)}
-                                value={text}
-                                numberOfLines={25}
-                                maxLength={400}
-                                textAlignVertical='top'
-                                // textAlign='left'
+                                    marginLeft: "70%"
+                                },
+                            ]}
+                        >
 
-                                style={{
-                                    height: 500,
-                                    width: '100%',
-                                    fontSize: 20,
-                                    overflow: 'hidden',
-                                    // justifyContent: 'center',
-                                    // alignItems: 'flex-start'
-                                }}
-                            />
-
+                            <View style={{ flexDirection: 'column', justifyContent: 'flex-end' }}>
+                                {getRecordingLines()}
+                            </View>
                         </View>
-                        <View style={styles.buttonview}>
-                            <TouchableOpacity style={styles.Touchablebutton} onPress={() => setModalVisible(true)} >
-                                <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>Save</Text>
-                            </TouchableOpacity>
+                        <View>
                             <Modal
                                 animationType="slide"
                                 transparent={true}
@@ -235,6 +299,7 @@ const MasterTasks = ({ navigation, route }) => {
                                             onChangeText={(title) => setTitle(title)}
                                             value={title}
                                         />
+
                                         <TouchableOpacity
                                             style={[styles.button, styles.buttonClose]}
                                             onPress={handleSave}>
@@ -247,6 +312,27 @@ const MasterTasks = ({ navigation, route }) => {
                     </ImageBackground>
                 </View>
             </ReactNativeZoomableView>
+            <View style={{ alignItems: 'center' }}>
+                <View style={styles.buttonview}>
+                    <TouchableOpacity onPress={pickImage} style={styles.Touchablebutton} >
+                        {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>Attachment</Text> */}
+                        <MaterialIcons name="attachment" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={handleToggleInput}>
+                        {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>{isTextInputEnabled ? 'Drawing' : 'Text'}</Text> */}
+                        {isTextInputEnabled ? <FontAwesome5 name="pen" size={24} color="#B9D5FF" /> : <MaterialIcons name="text-fields" size={24} color="#B9D5FF" />}
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={() => setModalVisible(true)} >
+                        {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>Save</Text> */}
+                        <FontAwesome name="save" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={recording ? stopRecording : startRecording}>
+                        {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>{recording ? 'Stop Recording' : 'Start Recording'}</Text> */}
+                        {recording ? <FontAwesome5 name="stop" size={24} color="#B9D5FF" /> : <MaterialIcons name="multitrack-audio" size={24} color="#B9D5FF" />}
+
+                    </TouchableOpacity>
+                </View>
+            </View>
         </View>
     )
 }
@@ -255,19 +341,33 @@ export default MasterTasks
 
 const styles = StyleSheet.create({
     buttonview: {
-        // marginTop: '9%',
-        marginLeft: '90%',
-        marginRight: 10,
-        // borderWidth: 2,
+        flexDirection: 'row',
+        // marginLeft: '90%',
+        // marginRight: 10,
+        // backgroundColor: 'black',
+        // alignItems: 'flex-start',
+        justifyContent: 'center',
+        marginBottom: '1%',
         backgroundColor: 'black',
-        alignItems: 'flex-end',
-        justifyContent: 'center'
+        borderRadius: 10,
+        width: Dimensions.get('window').width / 3,
     },
     Touchablebutton: {
-        height: 50,
-        width: 60,
+        // backgroundColor: 'grey',
+        width: Dimensions.get('window').width / 10,
         justifyContent: 'center',
-        borderWidth: 2
+        alignItems: 'center',
+        // borderWidth: 2,
+        borderColor: 'white',
+        borderRadius: 10,
+        height: 30
+    },
+    removebtn: {
+
+        width: Dimensions.get('window').width / 10,
+        alignSelf: "flex-start",
+        borderRadius: 10,
+        height: 30
     },
     centeredView: {
         flex: 1,
@@ -312,4 +412,30 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         textAlign: 'center',
     },
+    btncontainer: {
+        position: 'absolute',
+        flexDirection: 'row',
+        marginTop: '10%'
+        // top: '7%',
+        // width: '100%',
+
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        zIndex: 999999,
+        paddingTop: 10
+    },
+    buttonnote: {
+        zIndex: 9999999,
+        width: '10%',
+    },
+    textcontainer: {
+        height: '100%',
+        width: '100%',
+        fontSize: 15,
+        position: 'absolute',
+        marginTop: "0%"
+    }
 })

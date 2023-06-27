@@ -1,38 +1,81 @@
-import { View, Text, TextInput, ImageBackground, Button, StyleSheet, Image, TouchableWithoutFeedback } from 'react-native'
-import React, { useState, useRef } from 'react'
+import { View, ImageBackground, TextInput, Text, TouchableOpacity, PanResponder, Animated, StyleSheet, Modal, Alert, Pressable, ToastAndroid, Button, Dimensions, Image, Platform } from 'react-native'
+import React, { useRef, useEffect, useState } from 'react'
+import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
+import { useAuth } from "../context/auth";
+import clientApi from '../api/clientApi';
+import { useTasks } from '../context/Task';
+import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
+import * as Permissions from 'expo-permissions';
+import * as FileSystem from 'expo-file-system';
 import {
     DrawWithOptions,
     DrawProvider,
 } from '@archireport/react-native-svg-draw';
 import { LinearGradient } from 'expo-linear-gradient';
-
 import * as MediaLibrary from 'expo-media-library';
-import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
-import { ToastAndroid, Dimensions } from 'react-native';
-import { Audio } from 'expo-av';
-import * as Permissions from 'expo-permissions';
-import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import * as ImagePicker from 'expo-image-picker';
+import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 
-const Notes = () => {
-    const [notes, setNotes] = useState('')
+const Notes = ({ route }) => {
+    const Data = route.params;
+    // console.log("dATA.DESC", Data.desc)
+    const [text, setText] = useState('');
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const [title, setTitle] = useState('');
+
+    const [category, setCategory] = useState('Notes');
+    const [auth] = useAuth();
+    const { userId, token } = auth;
+    const [sound, setSound] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [recording, setRecording] = useState();
     const [recordings, setRecordings] = useState([]);
     const [message, setMessage] = useState("");
+    const pan = useRef(new Animated.ValueXY()).current;
     const [image, setImage] = useState(null);
-    const [scrollEnabled, setScrollEnabled] = useState(true);
-    const [isZoomed, setIsZoomed] = useState(false);
-    const handleZoom = (event) => {
-        setIsZoomed(event.zoomLevel > 1);
-    };
+    const [isTextInputEnabled, setIsTextInputEnabled] = useState(false);
 
-    const handleTouch = (event) => {
-        if (!isZoomed) {
-            event.preventDefault();
+
+
+    const { updateTasks } = useTasks();
+    const handleSave = async () => {
+        try {
+            if (!userId) {
+                console.log('userId is null', userId);
+                setModalVisible(false)
+                ToastAndroid.show("User ID is missing", ToastAndroid.SHORT);
+                return;
+            } else {
+                const headers = {
+                    Authorization: token
+                };
+                const res = await clientApi.post('/api/v1/tasks/create',
+                    { title, category, text, userId },
+                    { headers }
+                );
+                setModalVisible(!modalVisible)
+                if (res && res.data.success) {
+                    const updatedRes = await clientApi.get(`/api/v1/tasks/user-tasks/${userId}`);
+                    const updatedTasks = updatedRes.data;
+                    ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
+                    updateTasks(updatedTasks);
+                } else {
+                    ToastAndroid.show(res.data.message, ToastAndroid.SHORT);
+                }
+            }
+            setModalVisible(false)
+        } catch (error) {
+            setModalVisible(!modalVisible)
+            console.log(error);
+            ToastAndroid.show("Something went wrong");
+            setModalVisible(false)
+
         }
-    };
-
+    }
     const saveSnapshot = async (uri) => {
         const permission = await MediaLibrary.requestPermissionsAsync();
         if (permission.granted) {
@@ -42,8 +85,7 @@ const Notes = () => {
             console.log('Permission to access media library not granted.');
         }
     };
-    const [isTextInputEnabled, setIsTextInputEnabled] = useState(false);
-    const [inputText, setInputText] = useState('');
+
 
     const handleToggleInput = () => {
         setIsTextInputEnabled((prevIsTextInputEnabled) => !prevIsTextInputEnabled);
@@ -63,10 +105,10 @@ const Notes = () => {
             setImage(result.assets[0].uri);
         }
     };
-    const handleSave = () => {
-        // Handle the text save logic here
-        console.log('Saved Text:', inputText);
+    const removeImage = () => {
+        setImage(null);
     };
+
     async function startRecording() {
         try {
             const permission = await Audio.requestPermissionsAsync();
@@ -139,21 +181,34 @@ const Notes = () => {
             return <RecordingLine key={index} recordingLine={recordingLine} index={index} />;
         });
     }
-    // const playPauseAudio = async () => {
-    //     if (sound === null) return;
-
-    //     if (isPlaying) {
-    //         await sound.pauseAsync();
-    //     } else {
-    //         await sound.playAsync();
-    //     }
-    //     setIsPlaying(!isPlaying);
-    // };
+    useEffect(() => {
+        if (route.params && route.params.desc) {
+            setText(route.params.desc);
+            setTitle(route.params.head)
+        }
+    }, [route.params]);
+    const panResponder = PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: Animated.event([
+            null,
+            { dx: pan.x, dy: pan.y }
+        ], { useNativeDriver: false }),
+        onPanResponderRelease: () => {
+            pan.flattenOffset(); // This will set the offset to the current value and reset value to zero
+        },
+        onPanResponderGrant: () => {
+            pan.setOffset({
+                x: pan.x._value,
+                y: pan.y._value
+            }); // This will set the offset to the current value when the pan starts
+        }
+    });
     return (
         <View style={{
             flex: 1,
         }}>
             <ReactNativeZoomableView
+                disablePanOnInitialZoom={true}
                 scrollEnabled={false}
                 maxZoom={2}
                 minZoom={1}
@@ -168,53 +223,28 @@ const Notes = () => {
                 }}
             >
                 <View style={{
+                    flex: 1,
                     justifyContent: 'center',
                     alignItems: 'center'
                 }} >
                     <ImageBackground source={require('../../assets/not2.jpg')} style={{
                         width: '100%',
-                        height: Dimensions.get('window').height / 1.2,
+                        height: Dimensions.get('window').height / 1.21,
                         position: 'absolute',
-
-
                     }}
                         resizeMode="cover" >
-                        {/* <View style={{ flexDirection: 'row-reverse' }}> */}
-                        {/* <View style={{ alignItems: 'flex-end' }}>
-                                <View style={{ width: "100%", }}>
-                                    <Button title="Attachment" onPress={pickImage} style={{ backgroundColor: 'black' }} />
-                                    {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
-                                </View>
-                            </View> */}
-
-                        {/* <View>
-                                {sound && (
-                                    <Button
-                                        title={isPlaying ? 'Pause' : 'Play'}
-                                        onPress={playPauseAudio}
-                                    />
-                                )}
-                            </View> */}
-                        {/* </View> */}
 
                         {isTextInputEnabled ? (
-                            <><DrawWithOptions
-                                linearGradient={LinearGradient}
-
-                                close={() => true}
-                                takeSnapshot={(snap) => {
-                                    snap.then((uri) => {
-                                        saveSnapshot(uri);
-                                        ToastAndroid.show(uri, ToastAndroid.SHORT);
-                                    });
-                                }}
-                            />
-                                <TextInput value={inputText}
-                                    onChangeText={setInputText}
-                                    // onBlur={handleSave}
-                                    autoFocus multiline style={styles.textcontainer} />
+                            <>
+                                <TextInput
+                                    value={text}
+                                    onChangeText={(newtext) => setText(newtext)}
+                                    autoFocus
+                                    multiline
+                                    editable
+                                    style={styles.textcontainer} />
                             </>) : (<>
-                                <Text style={styles.textcontainer}>{inputText} </Text>
+                                <Text style={styles.textcontainer}>{text} </Text>
                                 <DrawWithOptions
                                     linearGradient={LinearGradient}
                                     close={() => true}
@@ -225,61 +255,169 @@ const Notes = () => {
                                         });
                                     }}
                                 /></>)}
-                        {/* <View style={{ width: '100%', fontSize: 15, position: 'absolute', marginTop: 80, alignItems: 'flex-end' }}>
-                            <Text>{message}</Text>
-                            <Button
-                                title={recording ? 'Stop Recording' : 'Start Recording'}
-                                onPress={recording ? stopRecording : startRecording} />
-                            {getRecordingLines()}
-
-                        </View> */}
-                        {/* <View style={{}}>
-                            <View>
-                                <Button title='Start Recording' />
-                                <Button title='Attachment' />
+                        <Animated.View {...panResponder.panHandlers} style={[pan.getLayout(), styles.btncontainer, { width: 200, height: 200 }]}>
+                            <View style={{ flexDirection: 'column' }} >
+                                {image && (
+                                    <>
+                                        <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />
+                                        <TouchableOpacity onPress={removeImage} style={styles.removebtn}>
+                                            <FontAwesome name="remove" size={30} color="#B9D5FF" />
+                                        </TouchableOpacity>
+                                    </>
+                                )}
                             </View>
-                        </View> */}
+
+                        </Animated.View>
                         <View
                             style={[
                                 styles.btncontainer,
                                 {
-                                    // Try setting flexDirection to "row".
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    height: ' 50%',
+
+                                    marginLeft: "70%"
                                 },
-                            ]}>
-                            <View style={{ alignSelf: 'flex-start' }} >
-                                <Button title="Attachment" onPress={pickImage} style={{ backgroundColor: 'black' }} />
-                                {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
-                            </View>
-                            <View style={{ alignSelf: 'flex-start' }}>
-                                <Button
-                                    title={recording ? 'Stop Recording' : 'Start Recording'}
-                                    onPress={recording ? stopRecording : startRecording} />
+                            ]}
+                        >
+
+                            <View style={{ flexDirection: 'column', justifyContent: 'flex-end' }}>
                                 {getRecordingLines()}
                             </View>
                         </View>
-                        <Button
-                            title={isTextInputEnabled ? 'Drawing' : 'Text'}
-                            onPress={handleToggleInput}
-                            style={{ marginBottom: 20 }}
-                        />
+                        <View>
+                            <Modal
+                                animationType="slide"
+                                transparent={true}
+                                visible={modalVisible}
+                                onRequestClose={() => {
+                                    Alert.alert('Modal has been closed.');
+                                    setModalVisible(!modalVisible);
+                                }}>
+                                <View style={styles.centeredView}>
+                                    <View style={styles.modalView}>
+                                        <TextInput
+                                            placeholder='Title'
+                                            style={styles.modalText}
+                                            onChangeText={(title) => setTitle(title)}
+                                            value={title}
+                                        />
 
+                                        <TouchableOpacity
+                                            style={[styles.button, styles.buttonClose]}
+                                            onPress={handleSave}>
+                                            <Text style={styles.textStyle}>Save</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </Modal>
+                        </View>
                     </ImageBackground>
                 </View>
             </ReactNativeZoomableView>
+            <View style={{ alignItems: 'center' }}>
+                <View style={styles.buttonview}>
+                    <TouchableOpacity onPress={pickImage} style={styles.Touchablebutton} >
+                        {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>Attachment</Text> */}
+                        <MaterialIcons name="attachment" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={handleToggleInput}>
+                        {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>{isTextInputEnabled ? 'Drawing' : 'Text'}</Text> */}
+                        {isTextInputEnabled ? <FontAwesome5 name="pen" size={24} color="#B9D5FF" /> : <MaterialIcons name="text-fields" size={24} color="#B9D5FF" />}
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={() => setModalVisible(true)} >
+                        {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>Save</Text> */}
+                        <FontAwesome name="save" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={recording ? stopRecording : startRecording}>
+                        {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>{recording ? 'Stop Recording' : 'Start Recording'}</Text> */}
+                        {recording ? <FontAwesome5 name="stop" size={24} color="#B9D5FF" /> : <MaterialIcons name="multitrack-audio" size={24} color="#B9D5FF" />}
+
+                    </TouchableOpacity>
+                </View>
+            </View>
         </View>
     )
 }
 
-export default Notes;
+export default Notes
 
 const styles = StyleSheet.create({
+    buttonview: {
+        flexDirection: 'row',
+        // marginLeft: '90%',
+        // marginRight: 10,
+        // backgroundColor: 'black',
+        // alignItems: 'flex-start',
+        justifyContent: 'center',
+        marginBottom: '1%',
+        backgroundColor: 'black',
+        borderRadius: 10,
+        width: Dimensions.get('window').width / 3,
+    },
+    Touchablebutton: {
+        // backgroundColor: 'grey',
+        width: Dimensions.get('window').width / 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        // borderWidth: 2,
+        borderColor: 'white',
+        borderRadius: 10,
+        height: 30
+    },
+    removebtn: {
+
+        width: Dimensions.get('window').width / 10,
+        alignSelf: "flex-start",
+        borderRadius: 10,
+        height: 30
+    },
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        // alignItems: 'flex-end',
+        marginTop: 22,
+        // height: 300,
+        // width: '30%'
+    },
+    modalView: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    button: {
+        borderRadius: 20,
+        padding: 10,
+        elevation: 2,
+    },
+    buttonOpen: {
+        backgroundColor: '#F194FF',
+    },
+    buttonClose: {
+        backgroundColor: '#2196F3',
+    },
+    textStyle: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+    },
     btncontainer: {
         position: 'absolute',
-        top: '7%',
-        width: '100%',
+        flexDirection: 'row',
+        marginTop: '10%'
+        // top: '7%',
+        // width: '100%',
 
     },
     row: {
@@ -289,15 +427,15 @@ const styles = StyleSheet.create({
         zIndex: 999999,
         paddingTop: 10
     },
-    button: {
+    buttonnote: {
         zIndex: 9999999,
-        width: '10%'
+        width: '10%',
     },
     textcontainer: {
         height: '100%',
         width: '100%',
         fontSize: 15,
         position: 'absolute',
-        marginTop: "13%"
+        marginTop: "0%"
     }
-});
+})

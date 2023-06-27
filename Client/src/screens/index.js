@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/auth';
 import clientApi from '../api/clientApi';
 import { useTasks } from '../context/Task';
+import AttachmentBtn from '../components/AttachmentBtn';
 
 
 const Hindex = () => {
@@ -80,7 +81,7 @@ const Hindex = () => {
                 break;
         }
         navigation.navigate(tabName, { id: _id, desc: text, head: title });
-        console.log(tabName, { id: _id, desc: text, head: title })
+        // console.log(tabName, { id: _id, desc: text, head: title })
     }
 
     const EmptyScreen = () => {
@@ -183,8 +184,9 @@ const Hindex = () => {
                 <View>
                     <View style={styles.tabcont}>
                         <Tab.Navigator initialRouteName={"DailyTasks"}
-                            // tabBarOptions={customTabBarStyle}
+
                             screenOptions={{
+                                tabBarScrollEnabled: true,
                                 swipeEnabled: false,
                                 tabBarActiveTintColor: 'white',
                                 tabBarLabelStyle: { fontSize: 10 },
@@ -196,15 +198,18 @@ const Hindex = () => {
                                     borderTopWidth: 1,
                                     borderTopColor: 'black',
                                 },
+                                tabBarItemStyle: {
+                                    width: 180
+                                }
                                 // tabBarInactiveBackgroundColor: 'white',
                             }}
                             style={styles.heading}
                             tabBarOptions={{
                                 tabStyle: {
                                     // Adjust the width or size of the tabs as needed
-                                    width: 180, // Example: set a fixed width of 100
+                                    // width: 180, // Example: set a fixed width of 100
                                 },
-                                scrollEnabled: true,
+                                // scrollEnabled: true,
                             }}
                         >
                             <Tab.Screen name="DailyTasks" component={DailyTasks}
@@ -217,10 +222,11 @@ const Hindex = () => {
                                 initialParams={{ id: '', desc: '' }}
                             />
                             <Tab.Screen name="Notes" component={Notes} />
-                            <Tab.Screen name="Contacts" component={EmptyScreen} />
-                            <Tab.Screen name="Goals" component={EmptyScreen} />
+
+                            <Tab.Screen name="Goals" component={AttachmentBtn} />
                             <Tab.Screen name="ToDoList" component={EmptyScreen} />
                             <Tab.Screen name="Milage" component={EmptyScreen} />
+                            <Tab.Screen name="Contacts" component={AttachmentBtn} />
                         </Tab.Navigator>
                     </View>
                 </View>
