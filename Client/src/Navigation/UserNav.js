@@ -48,6 +48,7 @@ const UserNav = () => {
                     width: 240,
                 },
             }}
+
             drawerContent={props => {
                 return (
                     <DrawerContentScrollView {...props}>

@@ -1,53 +1,50 @@
-import { View, ImageBackground, TextInput, Text, TouchableOpacity, PanResponder, Animated, StyleSheet, Modal, Alert, Pressable, ToastAndroid, Button, Dimensions, Image, Platform } from 'react-native'
+import { View, ImageBackground, TextInput, Text, TouchableOpacity, PanResponder, Animated, StyleSheet, Modal, Alert, ToastAndroid, Button, Dimensions, Image } from 'react-native'
 import React, { useRef, useEffect, useState } from 'react'
-import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { useAuth } from "../context/auth";
 import clientApi from '../api/clientApi';
 import { useTasks } from '../context/Task';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
-import * as Permissions from 'expo-permissions';
-import * as FileSystem from 'expo-file-system';
-import {
-    DrawWithOptions,
-    DrawProvider,
-} from '@archireport/react-native-svg-draw';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Entypo } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
+import { PinchGestureHandler, State, ScrollView, PanGestureHandler } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 
 const MasterTasks = ({ route }) => {
-    const Data = route.params;
-    // console.log("dATA.DESC", Data.desc)
+    const [currentPath, setCurrentPath] = useState([]);
+    const [paths, setPaths] = useState([]);
+    const [zoomScale, setZoomScale] = useState(1);
     const [text, setText] = useState('');
-
     const [modalVisible, setModalVisible] = useState(false);
     const [title, setTitle] = useState('');
-
     const [category, setCategory] = useState('MasterTasks');
     const [auth] = useAuth();
     const { userId, token } = auth;
-    const [sound, setSound] = useState(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [recording, setRecording] = useState();
     const [recordings, setRecordings] = useState([]);
     const [message, setMessage] = useState("");
-    const pan = useRef(new Animated.ValueXY()).current;
-    const [image, setImage] = useState(null);
     const [isTextInputEnabled, setIsTextInputEnabled] = useState(false);
-
-    // console.log("Dailytext", Data.id, Data.desc, Data.head)
-
+    const [image, setImage] = useState(null);
+    const [imageSize, setImageSize] = useState({ width: 200, height: 200 });
+    const movePan = useRef(new Animated.ValueXY()).current;
+    const resizePan = useRef(new Animated.ValueXY()).current;
     const { updateTasks } = useTasks();
+    const windowWidth = Dimensions.get('window').width;
+    const windowHeight = Dimensions.get('window').height;
+    const { height, width } = Dimensions.get('window');
+
     const handleSave = async () => {
         try {
             if (!userId) {
                 console.log('userId is null', userId);
                 setModalVisible(false)
-                ToastAndroid.show("User ID is missing", ToastAndroid.SHORT);
+                alert("User ID is missing");
+                console.log(auth)
                 return;
             } else {
                 const headers = {
@@ -76,17 +73,6 @@ const MasterTasks = ({ route }) => {
 
         }
     }
-    const saveSnapshot = async (uri) => {
-        const permission = await MediaLibrary.requestPermissionsAsync();
-        if (permission.granted) {
-            await MediaLibrary.saveToLibraryAsync(uri); // Save the snapshot to the device's photo library on Android
-            console.log('Snapshot saved successfully:', uri);
-        } else {
-            console.log('Permission to access media library not granted.');
-        }
-    };
-
-
     const handleToggleInput = () => {
         setIsTextInputEnabled((prevIsTextInputEnabled) => !prevIsTextInputEnabled);
     };
@@ -168,6 +154,24 @@ const MasterTasks = ({ route }) => {
             setIsPlaying(!isPlaying);
         };
 
+        // Add this useEffect hook to reset the playback when it reaches the end
+        useEffect(() => {
+            const updatePlaybackStatus = async (status) => {
+                if (status.didJustFinish) {
+                    setIsPlaying(false);
+                    await sound.setPositionAsync(0);
+                }
+            };
+
+            const subscription = sound.setOnPlaybackStatusUpdate(updatePlaybackStatus);
+
+            return () => {
+                if (subscription) {
+                    subscription.remove();
+                }
+            };
+        }, [sound]);
+
         return (
             <View style={styles.row}>
                 <Text>Recording {index + 1} - {recordingLine.duration}</Text>
@@ -178,7 +182,12 @@ const MasterTasks = ({ route }) => {
     }
     function getRecordingLines() {
         return recordings.map((recordingLine, index) => {
-            return <RecordingLine key={index} recordingLine={recordingLine} index={index} />;
+            return <RecordingLine
+                key={index}
+                recordingLine={recordingLine}
+                index={index}
+                sound={recordingLine.sound} // Pass the sound object as a prop
+            />;
         });
     }
     useEffect(() => {
@@ -187,52 +196,115 @@ const MasterTasks = ({ route }) => {
             setTitle(route.params.head)
         }
     }, [route.params]);
-    const panResponder = PanResponder.create({
+    const movepanResponder = PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onPanResponderMove: Animated.event([
             null,
-            { dx: pan.x, dy: pan.y }
+            { dx: movePan.x, dy: movePan.y }
         ], { useNativeDriver: false }),
         onPanResponderRelease: () => {
-            pan.flattenOffset(); // This will set the offset to the current value and reset value to zero
+            movePan.flattenOffset(); // This will set the offset to the current value and reset value to zero
         },
         onPanResponderGrant: () => {
-            pan.setOffset({
-                x: pan.x._value,
-                y: pan.y._value
+            movePan.setOffset({
+                x: movePan.x._value,
+                y: movePan.y._value
             }); // This will set the offset to the current value when the pan starts
         }
     });
+
+    const resizeHandleResponder = PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: (_, gesture) => {
+            const { dx, dy } = gesture;
+            const newWidth = imageSize.width + dx;
+            const newHeight = imageSize.height + dy;
+            setImageSize((prevSize) => ({
+                width: newWidth > 50 ? newWidth : prevSize.width,
+                height: newHeight > 50 ? newHeight : prevSize.height,
+            }));
+        },
+    });
+    const reverseLastPath = () => {
+        if (paths.length > 0) {
+            const updatedPaths = [...paths];
+            updatedPaths.pop(); // Remove the last path from the array
+            setPaths(updatedPaths);
+        }
+    };
+    const imageStyle = {
+        width: imageSize.width,
+        height: imageSize.height,
+        transform: [
+            { translateX: movePan.x },
+            { translateY: movePan.y },
+        ],
+    };
+    const onTouchMove = (event) => {
+        if (event.nativeEvent.touches.length === 1) {
+            const newPath = [...currentPath];
+
+            // get current user touches position
+            const locationX = event.nativeEvent.locationX;
+            const locationY = event.nativeEvent.locationY;
+
+            // create new point
+            const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(0)},${locationY.toFixed(0)} `;
+
+            // add the point to older points
+            newPath.push(newPoint);
+            setCurrentPath(newPath);
+        }
+    };
+
+    const onTouchEnd = () => {
+
+        const currentPaths = [...paths];
+        const newPath = [...currentPath];
+
+        // push new path with old path and clean current path state
+        currentPaths.push(newPath);
+        setPaths(currentPaths);
+        setCurrentPath([]);
+
+    };
+    const onPinchGestureEvent = (event) => {
+        setZoomScale(event.nativeEvent.scale);
+    };
+
+    const onPinchHandlerStateChange = (event) => {
+        if (event.nativeEvent.state === State.END) {
+            if (zoomScale < 1) {
+                setZoomScale(1);
+            }
+        }
+    };
+
     return (
         <View style={{
             flex: 1,
+            backgroundColor: 'white',
+            height: "100%"
         }}>
-            <ReactNativeZoomableView
-                disablePanOnInitialZoom={true}
-                scrollEnabled={false}
-                maxZoom={2}
-                minZoom={1}
-                zoomStep={0.5}
-                initialZoom={1}
-                bindToBorders={true}
-                onZoomAfter={this.logOutZoomState}
-                panEnabled={false}
-                panBoundaryPadding={0}
-                doubleTapZoomToCenter={true}
-                style={{
-                }}
+
+            <PinchGestureHandler
+                onGestureEvent={onPinchGestureEvent}
+                onHandlerStateChange={onPinchHandlerStateChange}
             >
-                <View style={{
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                }} >
+                <ScrollView
+                    contentContainerStyle={styles.scrollViewContentContainer}
+                    maximumZoomScale={2}
+                    minimumZoomScale={1}
+                    scrollEnabled={false}
+                    style={{ overflow: 'hidden' }}
+                    nestedScrollEnabled={true}
+                >
+
                     <ImageBackground source={require('../../assets/table2.png')} style={{
                         width: '100%',
-                        height: Dimensions.get('window').height / 1.21,
-                        position: 'absolute',
+                        height: windowHeight / 1.1,
                     }}
-                        resizeMode="cover" >
+                        resizeMode="contain" >
 
                         {isTextInputEnabled ? (
                             <>
@@ -243,42 +315,74 @@ const MasterTasks = ({ route }) => {
                                     multiline
                                     editable
                                     style={styles.textcontainer} />
-                            </>) : (<>
+                                <Svg height={height} width={width}>
+                                    {paths.length > 0 &&
+                                        paths.map((item, index) => (
+                                            <Path
+                                                key={`path-${index}`}
+                                                d={item.join('')}
+                                                stroke={'black'}
+                                                fill={'transparent'}
+                                                strokeWidth={5}
+                                                strokeLinejoin={'round'}
+                                                strokeLinecap={'round'}
+                                            />
+                                        ))}
+                                </Svg>
+                            </>) : (<View style={{ width: "100%", height: "100%" }}>
                                 <Text style={styles.textcontainer}>{text} </Text>
-                                <DrawWithOptions
-                                    linearGradient={LinearGradient}
-                                    close={() => true}
-                                    takeSnapshot={(snap) => {
-                                        snap.then((uri) => {
-                                            saveSnapshot(uri);
-                                            ToastAndroid.show(uri, ToastAndroid.SHORT);
-                                        });
-                                    }}
-                                /></>)}
-                        <Animated.View {...panResponder.panHandlers} style={[pan.getLayout(), styles.btncontainer, { width: 200, height: 200 }]}>
-                            <View style={{ flexDirection: 'column' }} >
+                                <View style={styles.svgContainer} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+                                    <Svg height={height} width={width}>
+                                        <Path
+                                            d={currentPath.join('')}
+                                            stroke={'black'}
+                                            fill={'transparent'}
+                                            strokeWidth={5}
+                                            strokeLinejoin={'round'}
+                                            strokeLinecap={'round'}
+                                        />
+
+                                        {paths.length > 0 &&
+                                            paths.map((item, index) => (
+                                                <Path
+                                                    key={`path-${index}`}
+                                                    d={item.join('')}
+                                                    stroke={'black'}
+                                                    fill={'transparent'}
+                                                    strokeWidth={5}
+                                                    strokeLinejoin={'round'}
+                                                    strokeLinecap={'round'}
+                                                />
+                                            ))}
+                                    </Svg>
+                                </View>
+
+                            </View>)}
+                        <View style={[styles.btncontainer]}>
+                            <Animated.View style={[styles.imageWrapper, imageStyle]} {...movepanResponder.panHandlers} >
+                                {!image ? null : (
+                                    <View style={styles.resizeHandle} {...resizeHandleResponder.panHandlers} />
+                                )}
                                 {image && (
                                     <>
-                                        <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />
-                                        <TouchableOpacity onPress={removeImage} style={styles.removebtn}>
+                                        <Image source={{ uri: image }} style={styles.image} />
+                                        <TouchableOpacity onPress={removeImage} style={styles.removeButton}>
                                             <FontAwesome name="remove" size={30} color="#B9D5FF" />
                                         </TouchableOpacity>
                                     </>
                                 )}
-                            </View>
-
-                        </Animated.View>
+                            </Animated.View>
+                        </View>
                         <View
                             style={[
                                 styles.btncontainer,
                                 {
-
                                     marginLeft: "70%"
                                 },
                             ]}
                         >
 
-                            <View style={{ flexDirection: 'column', justifyContent: 'flex-end' }}>
+                            <View style={{ flexDirection: 'column', justifyContent: 'flex-end', padding: 5 }}>
                                 {getRecordingLines()}
                             </View>
                         </View>
@@ -298,6 +402,7 @@ const MasterTasks = ({ route }) => {
                                             style={styles.modalText}
                                             onChangeText={(title) => setTitle(title)}
                                             value={title}
+
                                         />
 
                                         <TouchableOpacity
@@ -310,30 +415,43 @@ const MasterTasks = ({ route }) => {
                             </Modal>
                         </View>
                     </ImageBackground>
-                </View>
-            </ReactNativeZoomableView>
+                </ScrollView>
+            </PinchGestureHandler>
             <View style={{ alignItems: 'center' }}>
                 <View style={styles.buttonview}>
-                    <TouchableOpacity onPress={pickImage} style={styles.Touchablebutton} >
-                        {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>Attachment</Text> */}
-                        <MaterialIcons name="attachment" size={24} color="#B9D5FF" />
-                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.Touchablebutton} onPress={handleToggleInput}>
                         {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>{isTextInputEnabled ? 'Drawing' : 'Text'}</Text> */}
                         {isTextInputEnabled ? <FontAwesome5 name="pen" size={24} color="#B9D5FF" /> : <MaterialIcons name="text-fields" size={24} color="#B9D5FF" />}
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.Touchablebutton} onPress={() => setModalVisible(true)} >
-                        {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>Save</Text> */}
-                        <FontAwesome name="save" size={24} color="#B9D5FF" />
-                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.Touchablebutton} onPress={recording ? stopRecording : startRecording}>
                         {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>{recording ? 'Stop Recording' : 'Start Recording'}</Text> */}
                         {recording ? <FontAwesome5 name="stop" size={24} color="#B9D5FF" /> : <MaterialIcons name="multitrack-audio" size={24} color="#B9D5FF" />}
 
                     </TouchableOpacity>
+                    {paths.length > 0 && (
+                        <TouchableOpacity onPress={reverseLastPath} style={styles.Touchablebutton}>
+                            <Entypo name="back-in-time" size={24} color="#B9D5FF" />
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => {
+                        setPaths([]);
+                        setText('')
+                    }} style={styles.Touchablebutton}>
+                        <AntDesign name="delete" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={pickImage} style={styles.Touchablebutton} >
+                        {/* <Text style={{ fontSize: 15, marginRight: 10, color: 'white' }}>Attachment</Text> */}
+                        <MaterialIcons name="attachment" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.Touchablebutton} onPress={() => setModalVisible(true)} >
+                        {/* <Text style={{ fontSize: 20, marginRight: 10, color: 'white' }}>Save</Text> */}
+                        <FontAwesome name="save" size={24} color="#B9D5FF" />
+                    </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </View >
     )
 }
 
@@ -342,40 +460,69 @@ export default MasterTasks
 const styles = StyleSheet.create({
     buttonview: {
         flexDirection: 'row',
-        // marginLeft: '90%',
-        // marginRight: 10,
-        // backgroundColor: 'black',
-        // alignItems: 'flex-start',
         justifyContent: 'center',
         marginBottom: '1%',
         backgroundColor: 'black',
         borderRadius: 10,
-        width: Dimensions.get('window').width / 3,
+        width: Dimensions.get('window').width,
     },
     Touchablebutton: {
-        // backgroundColor: 'grey',
         width: Dimensions.get('window').width / 10,
         justifyContent: 'center',
         alignItems: 'center',
-        // borderWidth: 2,
         borderColor: 'white',
         borderRadius: 10,
         height: 30
     },
-    removebtn: {
-
-        width: Dimensions.get('window').width / 10,
-        alignSelf: "flex-start",
+    removeButton: {
+        position: 'absolute',
+        top: -15,
+        right: -15,
+    },
+    btncontainer: {
+        position: 'absolute',
+        flexDirection: 'row',
+        marginTop: '10%',
+    },
+    imageContainer: {
+        width: 200,
+        height: 200,
+        // borderWidth: 2,
+        // borderColor: 'black',
+    },
+    imageWrapper: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    image: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    resizeHandle: {
+        position: 'absolute',
+        bottom: -14,
+        right: -13,
+        width: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'black',
         borderRadius: 10,
-        height: 30
+    },
+    resizeHandleInner: {
+        width: 10,
+        height: 10,
+        backgroundColor: '#B9D5FF',
+        borderRadius: 1,
     },
     centeredView: {
         flex: 1,
         justifyContent: 'center',
-        // alignItems: 'flex-end',
         marginTop: 22,
-        // height: 300,
-        // width: '30%'
     },
     modalView: {
         margin: 20,
@@ -411,15 +558,10 @@ const styles = StyleSheet.create({
     modalText: {
         marginBottom: 15,
         textAlign: 'center',
+        borderWidth: 1,
+        width: "10%"
     },
-    btncontainer: {
-        position: 'absolute',
-        flexDirection: 'row',
-        marginTop: '10%'
-        // top: '7%',
-        // width: '100%',
 
-    },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -437,5 +579,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
         position: 'absolute',
         marginTop: "0%"
-    }
+    },
+
 })

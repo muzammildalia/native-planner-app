@@ -15,61 +15,16 @@ import { TasksProvider } from './src/context/Task';
 import ForgotPassword from './src/screens/ForgotPassword';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MainNavigation from './src/Navigation';
+import { gestureHandlerRootHOC } from 'react-native-gesture-handler';
 
-// function EmptyScreen() {
-//   return (
-//     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-//       <Text>Home Screen</Text>
-//     </View>
-//   );
-// }
-
-// const Drawer = createDrawerNavigator();
-// const Stack = createNativeStackNavigator();
-
-
-// function Root() {
-//   return (
-//     <Drawer.Navigator
-//       initialRouteName="Home"
-//       useLegacyImplementation
-//       screenOptions={{
-//         headerStyle: {
-//           backgroundColor: '#B9D5FF'
-//         },
-//         drawerStyle: {
-//           backgroundColor: '#B9D5FF',
-//           width: 240,
-//         },
-//       }}
-//     >
-//       <Drawer.Screen name="Home" component={Hindex} />
-//       <Drawer.Screen name="Calender" component={CalenderScreen} />
-//       <Drawer.Screen name="Logout" options={{ title: 'Logout', headerShown: false }} component={Login} />
-//       <Drawer.Screen name="Settings" component={Setting} />
-//     </Drawer.Navigator>
-//   );
-// }
 function App() {
   return (
     <AuthProvider>
       <TasksProvider>
-        {/* <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="Register" component={Register} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-            <Stack.Screen
-              name="Root"
-              component={Root}
-              options={{ headerShown: false }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer> */}
-        <MainNavigation />
+        <MainNavigation style={{ backgroundColor: "#ffffff" }} />
       </TasksProvider>
     </AuthProvider>
   );
 }
 
-export default App;
+export default gestureHandlerRootHOC(App);

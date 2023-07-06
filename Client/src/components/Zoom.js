@@ -15,7 +15,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 
-const DailyTasks = ({ route }) => {
+const ToDoList = ({ route }) => {
     const Data = route.params;
     const [currentPath, setCurrentPath] = useState([]);
     const [paths, setPaths] = useState([]);
@@ -23,7 +23,7 @@ const DailyTasks = ({ route }) => {
     const [text, setText] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [title, setTitle] = useState('');
-    const [category, setCategory] = useState('DailyTasks');
+    const [category, setCategory] = useState('TodoList');
     const [auth] = useAuth();
     const { userId, token } = auth;
     const [recording, setRecording] = useState();
@@ -301,10 +301,12 @@ const DailyTasks = ({ route }) => {
                     nestedScrollEnabled={true}
                 >
 
-                    <ImageBackground source={require('../../assets/table1.png')} style={{
-                        width: '100%',
-                        height: windowHeight / 1.1,
-                    }}
+                    <View
+                        style={{
+                            width: '100%',
+                            backgroundColor: 'white',
+                            height: windowHeight / 1.1,
+                        }}
                         resizeMode="contain" >
 
                         {isTextInputEnabled ? (
@@ -415,7 +417,7 @@ const DailyTasks = ({ route }) => {
                                 </View>
                             </Modal>
                         </View>
-                    </ImageBackground>
+                    </View>
                 </ScrollView>
             </PinchGestureHandler>
             <View style={{ alignItems: 'center' }}>
@@ -456,7 +458,7 @@ const DailyTasks = ({ route }) => {
     )
 }
 
-export default DailyTasks
+export default ToDoList
 
 const styles = StyleSheet.create({
     buttonview: {

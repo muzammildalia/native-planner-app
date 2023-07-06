@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, Button, TouchableOpacity, ToastAndroid, Alert } from 'react-native'
-import { Calendar, LocaleConfig } from 'react-native-calendars';
+import { View, Text, Button, TouchableOpacity, ToastAndroid, Alert, StyleSheet } from 'react-native'
+import { Calendar } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { ScrollView, gestureHandlerRootHOC } from 'react-native-gesture-handler';
@@ -14,6 +14,9 @@ import { useAuth } from '../context/auth';
 import clientApi from '../api/clientApi';
 import { useTasks } from '../context/Task';
 import AttachmentBtn from '../components/AttachmentBtn';
+import Contacts from '../components/Contacts';
+import Draw from '../components/Draw';
+import Zoom from '../components/Zoom';
 
 
 const Hindex = () => {
@@ -93,8 +96,8 @@ const Hindex = () => {
     }
 
     return (
-        <View style={{ flexDirection: "row", width: "100%", height: '100%', marginTop: 10, backgroundColor: 'white' }}>
-            <View style={{ width: "40%" }}>
+        <View style={{ flexDirection: "row", width: "100%", height: '100%' }}>
+            <View style={{ flexDirection: 'column', height: "100%", width: "40%", backgroundColor: 'white' }}>
                 <View style={{ flexDirection: "row", justifyContent: 'space-evenly' }}>
                     <View style={{}}>
                         <Text style={{ fontSize: 150, textAlign: 'center', fontWeight: '700' }}>{currentDay}</Text>
@@ -111,8 +114,20 @@ const Hindex = () => {
                                 <Ionicons name="add-circle-outline" size={40} color="red" />
                             </TouchableOpacity>
                         </View>
-                        <View style={{ flexDirection: "column", height: 300, justifyContent: 'center' }}>
+                        <View style={{ flexDirection: "column", height: 250, justifyContent: 'center' }}>
                             <Calendar
+                                theme={{
+                                    calendarBackground: '#ffffff',
+                                    todayTextColor: '#00adf5',
+                                    dayTextColor: '#2d4150',
+                                    textDisabledColor: '#d9e1e8',
+                                    monthTextColor: '#2d4150',
+                                    textDayFontSize: 10,
+                                    textMonthFontSize: 14,
+                                    textDayHeaderFontSize: 12,
+                                    rowGap: 2,
+                                }}
+                                hideExtraDays
                                 onDayPress={day => {
                                     setSelected(day.dateString);
                                 }}
@@ -123,63 +138,60 @@ const Hindex = () => {
 
 
                                 }}
+
                                 markedDates={{
                                     [selected]: { selected: true, disableTouchEvent: true, selectedDotColor: 'orange' }
                                 }}
                                 style={{
 
-                                    borderColor: 'black',
-                                    borderWidth: 1,
-                                    borderColor: 'black',
+                                    // borderColor: 'black',
+                                    // borderWidth: 1,
+                                    rowGap: 0,
                                     borderRadius: 15,
                                     paddingBottom: 1,
                                     height: '100%',
+                                    width: 250,
                                     marginBottom: 10,
+
 
                                 }}
                             />
                         </View>
                     </View>
                 </View>
-                <View>
-                    <SafeAreaView style={{ marginLeft: 10, paddingLeft: 8, paddingRight: 10 }}>
-                        <View style={styles.cont}>
-                            <View style={styles.headingcontainer}>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', }}>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', marginLeft: '35%' }}>
-                                        <Text style={styles.heading}>Appointments
+                <View style={{ flexDirection: "row", height: "66.5%" }}>
+                    <View style={{ flexDirection: "column", height: "100%", width: "100%" }}>
+                        <SafeAreaView style={{ marginLeft: 10, paddingLeft: 8, paddingRight: 10, height: '100%' }}>
+                            <View style={[styles.cont, { height: "100%" }]}>
+                                <View style={styles.headingcontainer}>
+                                    <Text style={styles.heading}>Appointments
 
-                                        </Text>
-                                    </View>
-                                    {/* <View style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
-                                        <TouchableOpacity style={{ marginRight: '10%' }}>
-                                            <Ionicons name="md-add-circle-outline" size={35} color="red" />
-                                        </TouchableOpacity>
-                                    </View> */}
+                                    </Text>
+
                                 </View>
+                                <ScrollView style={styles.innerContainer}>
+                                    {tasks.map((task) => (
+
+                                        <View style={{ paddingBottom: 10 }}>
+                                            <TouchableOpacity key={task._id} style={styles.button} onPress={() => openTabBasedOnCategory(task)}>
+                                                <View style={styles.textContainer}>
+                                                    <Text style={styles.taskName}>{task.title}</Text>
+                                                    <Text style={styles.taskName}>{task.category}</Text>
+                                                    <Text style={styles.time}>{new Date(task.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                    ))}
+                                </ScrollView>
                             </View>
-                            <ScrollView style={styles.innerContainer}>
-                                {tasks.map((task) => (
-
-                                    <View style={{ paddingBottom: 10 }}>
-                                        <TouchableOpacity key={task._id} style={styles.button} onPress={() => openTabBasedOnCategory(task)}>
-                                            <View style={styles.textContainer}>
-                                                <Text style={styles.taskName}>{task.title}</Text>
-                                                <Text style={styles.taskName}>{task.category}</Text>
-                                                <Text style={styles.time}>{new Date(task.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                ))}
-                            </ScrollView>
-                        </View>
-                    </SafeAreaView>
-                </View>
+                        </SafeAreaView>
+                    </View>
+                </View >
             </View >
 
             <View style={
-                { width: "60%", paddingLeft: 20, paddingRight: 20 }
+                { flexDirection: 'column', width: "60%", paddingRight: "1%" }
             }>
                 <View>
                     <View style={styles.tabcont}>
@@ -201,21 +213,11 @@ const Hindex = () => {
                                 tabBarItemStyle: {
                                     width: 180
                                 }
-                                // tabBarInactiveBackgroundColor: 'white',
                             }}
                             style={styles.heading}
-                            tabBarOptions={{
-                                tabStyle: {
-                                    // Adjust the width or size of the tabs as needed
-                                    // width: 180, // Example: set a fixed width of 100
-                                },
-                                // scrollEnabled: true,
-                            }}
+
                         >
                             <Tab.Screen name="DailyTasks" component={DailyTasks}
-                                // options={({ route }) => ({                                
-                                // desc: route.params?.desc
-                                // })}
                                 initialParams={{ id: '', desc: '' }}
                             />
                             <Tab.Screen name="MasterTasks" component={MasterTasks}
@@ -224,9 +226,9 @@ const Hindex = () => {
                             <Tab.Screen name="Notes" component={Notes} />
 
                             <Tab.Screen name="Goals" component={AttachmentBtn} />
-                            <Tab.Screen name="ToDoList" component={EmptyScreen} />
-                            <Tab.Screen name="Milage" component={EmptyScreen} />
-                            <Tab.Screen name="Contacts" component={AttachmentBtn} />
+                            {/* <Tab.Screen name="ToDoList" component={Contacts} /> */}
+                            <Tab.Screen name="Milage" component={Draw} />
+                            <Tab.Screen name="ToDoList" component={Zoom} />
                         </Tab.Navigator>
                     </View>
                 </View>
@@ -235,7 +237,7 @@ const Hindex = () => {
     )
 }
 
-export default gestureHandlerRootHOC(Hindex)
+export default Hindex
 
 const styles = {
     container: {
@@ -312,7 +314,7 @@ const styles = {
         borderRadius: 5, // Set the border radius
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        height: '79.3%'
+        // height: '79.5%'
 
     },
     tabcont: {
@@ -321,8 +323,8 @@ const styles = {
         borderRadius: 1, // Set the border radius
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        height: '99%',
-        width: 730
+        height: '100%',
+        width: "100%"
 
     },
     can: {
@@ -335,16 +337,16 @@ const styles = {
     },
     headingcontainer: {
         backgroundColor: 'grey',
-        height: '13%',
+        height: 40,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        // justifyContent: 'center'
+        justifyContent: 'center',
     },
     heading: {
         fontSize: 20,
         fontWeight: 'bold',
         color: 'white',
-        textAlign: "center"
+        textAlign: "center",
 
     },
     innerContainer: {
@@ -355,3 +357,9 @@ const styles = {
 
     }
 };
+const calendarStyles = StyleSheet.create({
+    dayText: {
+        fontSize: 18.2,
+        marginTop: 0,
+    },
+})
