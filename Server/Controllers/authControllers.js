@@ -75,8 +75,9 @@ export const loginController = async (req, res) => {
             });
         }
         //token
+        const oneMonthInSeconds = 30 * 24 * 60 * 60; // Assuming 30 days in a month
         const token = await JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: "1h",
+            expiresIn: oneMonthInSeconds,
         });
         console.log(token)
         res.status(200).send({

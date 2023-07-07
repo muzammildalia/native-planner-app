@@ -172,8 +172,8 @@ const Hindex = () => {
                                 <ScrollView style={styles.innerContainer}>
                                     {tasks.map((task) => (
 
-                                        <View style={{ paddingBottom: 10 }}>
-                                            <TouchableOpacity key={task._id} style={styles.button} onPress={() => openTabBasedOnCategory(task)}>
+                                        <View style={{ paddingBottom: 10 }} key={task._id}>
+                                            <TouchableOpacity style={styles.button} onPress={() => openTabBasedOnCategory(task)}>
                                                 <View style={styles.textContainer}>
                                                     <Text style={styles.taskName}>{task.title}</Text>
                                                     <Text style={styles.taskName}>{task.category}</Text>

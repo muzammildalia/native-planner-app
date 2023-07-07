@@ -140,7 +140,7 @@ const ToDoList = ({ route }) => {
         const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds;
         return `${minutesDisplay}:${secondsDisplay}`;
     }
-    function RecordingLine({ recordingLine, index }) {
+    function RecordingLine({ recordingLine, index, onRemove }) {
         const [isPlaying, setIsPlaying] = useState(false);
         const sound = recordingLine.sound;
 
@@ -172,22 +172,31 @@ const ToDoList = ({ route }) => {
                 }
             };
         }, [sound]);
-
+        const handleRemove = () => {
+            onRemove(index);
+        };
         return (
             <View style={styles.row}>
-                <Text>Recording {index + 1} - {recordingLine.duration}</Text>
-                <Button style={styles.button} onPress={handlePlaybackToggle} title={isPlaying ? 'Pause' : 'Play'}></Button>
-                <Button style={styles.button} onPress={() => Sharing.shareAsync(recordingLine.file)} title="Share"></Button>
+                <Text style={{ fontWeight: 'bold' }}>Recording {index + 1} - {recordingLine.duration}</Text>
+                <TouchableOpacity style={styles.button} onPress={handlePlaybackToggle} >{isPlaying ? <AntDesign name="pausecircle" size={30} color="black" /> : <AntDesign name="play" size={30} color="black" />}</TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={() => Sharing.shareAsync(recordingLine.file)}><Entypo name="share" size={30} color="black" /></TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={handleRemove} ><MaterialIcons name="remove-circle" size={30} color="black" /></TouchableOpacity>
             </View>
         );
     }
     function getRecordingLines() {
+        const handleRemoveRecording = (index) => {
+            const updatedRecordings = [...recordings];
+            updatedRecordings.splice(index, 1);
+            setRecordings(updatedRecordings);
+        };
         return recordings.map((recordingLine, index) => {
             return <RecordingLine
                 key={index}
                 recordingLine={recordingLine}
                 index={index}
-                sound={recordingLine.sound} // Pass the sound object as a prop
+                sound={recordingLine.sound}
+                onRemove={handleRemoveRecording}
             />;
         });
     }
@@ -543,7 +552,6 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     button: {
-        borderRadius: 20,
         padding: 10,
         elevation: 2,
     },
