@@ -37,6 +37,7 @@ const AuthProvider = ({ children }) => {
         fetchAuth();
     }, []);
 
+
     return (
         <AuthContext.Provider value={[auth, setAuth]}>
             {children}
